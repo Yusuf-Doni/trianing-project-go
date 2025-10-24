@@ -1,7 +1,7 @@
 # Arsitektur Sistem Inventory Management
 
 ## Overview
-Sistem inventory management dengan integrasi Tokopedia scraping dan Gemini AI validation menggunakan arsitektur monolitik.
+Sistem inventory management dengan PostgreSQL database menggunakan arsitektur monolitik. Sistem ini fokus pada manajemen inventory dengan simulasi scraping harga pasar.
 
 ## Komponen Sistem
 
@@ -18,7 +18,7 @@ Sistem inventory management dengan integrasi Tokopedia scraping dan Gemini AI va
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                 BACKEND (Golang)                           │
+│                 BACKEND (Golang)                            │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
 │  │   Controllers   │  │     Models      │  │    Routes    │ │
 │  │   - CRUD Ops    │  │   - Inventory   │  │   - REST API │ │
@@ -98,19 +98,19 @@ POST   /scrape              → Trigger scraping harga Tokopedia
 GET    /                    → Hello World endpoint
 ```
 
-## Fitur AI & Scraping
+## Fitur Simulasi Scraping
 
-### Simulasi Scraping Tokopedia
+### Simulasi Scraping Harga Pasar
 1. **Input**: Keyword dari field `tokped_keyword`
-2. **Process**: Simulasi pencarian harga di Tokopedia
-3. **Validation**: AI memvalidasi hasil scraping
+2. **Process**: Simulasi algoritma pencarian harga
+3. **Validation**: Validasi harga masuk akal (80%-120% dari harga jual)
 4. **Output**: Harga pasar yang dinormalisasi
 
-### Validasi Gemini AI
-1. **Price Range Check**: Memastikan harga masuk akal
+### Validasi Harga
+1. **Price Range Check**: Memastikan harga masuk akal (50%-150% dari harga jual)
 2. **Product Name Normalization**: Standardisasi nama produk
 3. **Data Quality**: Filter hasil yang tidak valid
-4. **Confidence Score**: Tingkat kepercayaan hasil scraping
+4. **Simulation Algorithm**: Menggunakan variasi berdasarkan panjang keyword
 
 ## Security & Performance
 
@@ -156,11 +156,11 @@ Load Balancer → Go Application → PostgreSQL Cluster
 
 ### Planned Features
 1. **Real Tokopedia API Integration**
-2. **Gemini AI API Integration**
-3. **Advanced Analytics Dashboard**
-4. **Automated Price Alerts**
-5. **Multi-vendor Support**
-6. **Mobile App Integration**
+2. **Advanced Analytics Dashboard**
+3. **Automated Price Alerts**
+4. **Multi-vendor Support**
+5. **Mobile App Integration**
+6. **Real-time Price Monitoring**
 
 ### Scalability Considerations
 1. **Microservices Architecture**: Memisahkan scraping service
@@ -171,4 +171,4 @@ Load Balancer → Go Application → PostgreSQL Cluster
 
 ---
 
-**Catatan**: Sistem ini menggunakan simulasi untuk fitur scraping dan AI validation sesuai dengan kebutuhan development dan testing.
+**Catatan**: Sistem ini menggunakan PostgreSQL sebagai database utama dan simulasi untuk fitur scraping harga pasar sesuai dengan kebutuhan development dan testing.

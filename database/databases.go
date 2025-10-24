@@ -27,7 +27,7 @@ func InitDatabase() *sql.DB {
 	}
 
 	// Buat tabel inventory sesuai struktur Google Sheets
-	createTableSQL := `
+	createInventoryTableSQL := `
 	CREATE TABLE IF NOT EXISTS inventory (
 		id SERIAL PRIMARY KEY,
 		nama_barang TEXT NOT NULL,
@@ -43,9 +43,87 @@ func InitDatabase() *sql.DB {
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
-	_, err = DB.Exec(createTableSQL)
+	_, err = DB.Exec(createInventoryTableSQL)
 	if err != nil {
-		log.Fatalf("gagal membuat tabel: %v", err)
+		log.Fatalf("gagal membuat tabel inventory: %v", err)
+	}
+
+	// Buat tabel users untuk authentication
+	createUsersTableSQL := `
+	CREATE TABLE IF NOT EXISTS users (
+		id SERIAL PRIMARY KEY,
+		username VARCHAR(50) UNIQUE NOT NULL,
+		password VARCHAR(255) NOT NULL,
+		email VARCHAR(100) UNIQUE NOT NULL,
+		role VARCHAR(20) DEFAULT 'user',
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	_, err = DB.Exec(createUsersTableSQL)
+	if err != nil {
+		log.Fatalf("gagal membuat tabel users: %v", err)
+	}
+
+	// Pastikan tabel users sudah dibuat sebelum membuat sessions
+	_, err = DB.Exec("SELECT 1 FROM users LIMIT 1")
+	if err != nil {
+		log.Fatalf("tabel users belum tersedia: %v", err)
+	}
+
+	// Buat tabel sessions untuk session management (tanpa foreign key dulu)
+	createSessionsTableSQL := `
+	CREATE TABLE IF NOT EXISTS sessions (
+		id VARCHAR(64) PRIMARY KEY,
+		user_id INTEGER NOT NULL,
+		username VARCHAR(50) NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		expires_at TIMESTAMP NOT NULL
+	);`
+
+	_, err = DB.Exec(createSessionsTableSQL)
+	if err != nil {
+		log.Fatalf("gagal membuat tabel sessions: %v", err)
+	}
+
+	// Tambahkan foreign key constraint setelah tabel dibuat
+	addForeignKeySQL := `
+	DO $$ 
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.table_constraints 
+			WHERE constraint_name = 'sessions_user_id_fkey' 
+			AND table_name = 'sessions'
+		) THEN
+			ALTER TABLE sessions ADD CONSTRAINT sessions_user_id_fkey 
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+		END IF;
+	END $$;`
+
+	_, err = DB.Exec(addForeignKeySQL)
+	if err != nil {
+		log.Printf("Warning: gagal menambahkan foreign key constraint: %v", err)
+	}
+
+	// Buat index untuk performa yang lebih baik
+	createIndexSQL := `
+	CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+	CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);`
+
+	_, err = DB.Exec(createIndexSQL)
+	if err != nil {
+		log.Printf("Warning: gagal membuat index: %v", err)
+	}
+
+	// Insert default admin user jika belum ada
+	insertAdminSQL := `
+	INSERT INTO users (username, password, email, role) VALUES 
+	('admin', 'admin123', 'admin@inventory.com', 'admin')
+	ON CONFLICT (username) DO NOTHING;`
+
+	_, err = DB.Exec(insertAdminSQL)
+	if err != nil {
+		log.Printf("Warning: gagal insert admin user: %v", err)
 	}
 
 	log.Println("✅ Koneksi ke PostgreSQL berhasil dan tabel inventory siap!")

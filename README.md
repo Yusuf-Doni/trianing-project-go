@@ -13,6 +13,11 @@
 - ✅ Business logic validation
 - ✅ API documentation
 - ✅ Monolith architecture
+- ✅ **User Authentication & Authorization**
+- ✅ **Login/Logout functionality**
+- ✅ **User Registration**
+- ✅ **Session Management**
+- ✅ **Protected Routes**
 
 ## Prerequisites
 
@@ -159,6 +164,30 @@ curl http://localhost:8080/api/users/1
 - Delete users
 - Real-time updates
 - Error handling and success messages
+
+## Authentication System
+
+### Default Login Credentials
+- **Admin User**: username=`admin`, password=`admin123`
+- **Test Users**: You can register new users through the registration page
+
+### Authentication Features
+- **Login Page**: `/login` - Secure user authentication
+- **Registration Page**: `/register` - New user registration
+- **Logout**: Automatic session termination
+- **Session Management**: Secure session handling with expiration
+- **Protected Routes**: All inventory management routes require authentication
+
+### Authentication Flow
+1. **Access Control**: All inventory routes (`/dashboard`, `/addproduct`, etc.) are protected
+2. **Login Required**: Unauthenticated users are redirected to `/login`
+3. **Session Validation**: Sessions are validated on each request
+4. **Automatic Logout**: Sessions expire after 24 hours
+
+### User Roles
+- **Admin**: Full access to all features
+- **User**: Standard user access
+- **Manager**: Enhanced permissions (can be extended)
 
 ## Project Structure
 

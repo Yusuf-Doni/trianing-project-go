@@ -13,15 +13,15 @@ import (
 	"github.com/Yusuf-Doni/web-go-CRUD/service"
 )
 
-// GetAllInventory retrieves all inventory items from Google Sheets
-func GetAllInventory(sheetsService service.SheetsServiceInterface) ([]model.Inventory, error) {
-	return sheetsService.GetAllInventory()
+// GetAllInventory retrieves all inventory items from PostgreSQL
+func GetAllInventory(inventoryService *service.InventoryService) ([]model.Inventory, error) {
+	return inventoryService.GetAllInventory()
 }
 
 // DashboardController displays the main inventory dashboard
-func DashboardController(sheetsService service.SheetsServiceInterface) func(w http.ResponseWriter, r *http.Request) {
+func DashboardController(inventoryService *service.InventoryService) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		inventories, err := GetAllInventory(sheetsService)
+		inventories, err := GetAllInventory(inventoryService)
 		if err != nil {
 			log.Printf("Error fetching inventory: %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -101,7 +101,7 @@ func formatCurrency(amount int) string {
 }
 
 // AddProductController handles adding new inventory items
-func AddProductController(sheetsService service.SheetsServiceInterface) func(w http.ResponseWriter, r *http.Request) {
+func AddProductController(inventoryService *service.InventoryService) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			fp := filepath.Join("view", "addproduct.html")
@@ -146,7 +146,7 @@ func AddProductController(sheetsService service.SheetsServiceInterface) func(w h
 				Keterangan:    keterangan,
 			}
 
-			err := sheetsService.AddInventory(inventory)
+			err := inventoryService.AddInventory(inventory)
 			if err != nil {
 				log.Printf("Error inserting product: %v", err)
 				http.Error(w, "Failed to save product", http.StatusInternalServerError)
@@ -162,7 +162,7 @@ func AddProductController(sheetsService service.SheetsServiceInterface) func(w h
 }
 
 // UpdateInventoryController handles updating inventory items
-func UpdateInventoryController(sheetsService service.SheetsServiceInterface) func(w http.ResponseWriter, r *http.Request) {
+func UpdateInventoryController(inventoryService *service.InventoryService) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			id, _ := strconv.Atoi(r.FormValue("id"))
@@ -192,7 +192,7 @@ func UpdateInventoryController(sheetsService service.SheetsServiceInterface) fun
 				Keterangan:    keterangan,
 			}
 
-			err := sheetsService.UpdateInventory(id, inventory)
+			err := inventoryService.UpdateInventory(id, inventory)
 			if err != nil {
 				log.Printf("Error updating product: %v", err)
 				http.Error(w, "Failed to update product", http.StatusInternalServerError)
@@ -207,12 +207,12 @@ func UpdateInventoryController(sheetsService service.SheetsServiceInterface) fun
 }
 
 // DeleteInventoryController handles deleting inventory items
-func DeleteInventoryController(sheetsService service.SheetsServiceInterface) func(w http.ResponseWriter, r *http.Request) {
+func DeleteInventoryController(inventoryService *service.InventoryService) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			id, _ := strconv.Atoi(r.FormValue("id"))
 
-			err := sheetsService.DeleteInventory(id)
+			err := inventoryService.DeleteInventory(id)
 			if err != nil {
 				log.Printf("Error deleting product: %v", err)
 				http.Error(w, "Failed to delete product", http.StatusInternalServerError)
@@ -226,12 +226,81 @@ func DeleteInventoryController(sheetsService service.SheetsServiceInterface) fun
 	}
 }
 
+// ManageProductController displays the product management page
+func ManageProductController(inventoryService *service.InventoryService) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			// Get all inventory items
+			inventories, err := GetAllInventory(inventoryService)
+			if err != nil {
+				log.Printf("Error fetching inventory: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+
+			fp := filepath.Join("view", "manageproduk.html")
+			
+			// Create template with custom functions
+			tmpl := template.New("manageproduk.html").Funcs(template.FuncMap{
+				"formatNumber": func(n int) string {
+					return formatCurrency(n)
+				},
+				"sub": func(a, b int) int {
+					return a - b
+				},
+				"len": func(s []model.Inventory) int {
+					return len(s)
+				},
+				"getTotalStock": func(inventories []model.Inventory) int {
+					total := 0
+					for _, inv := range inventories {
+						total += inv.StokDimiliki
+					}
+					return total
+				},
+				"getTotalValue": func(inventories []model.Inventory) int {
+					total := 0
+					for _, inv := range inventories {
+						total += inv.StokDimiliki * inv.HargaJual
+					}
+					return total
+				},
+				"getScrapingCount": func(inventories []model.Inventory) int {
+					count := 0
+					for _, inv := range inventories {
+						if inv.TokpedKeyword != "" {
+							count++
+						}
+					}
+					return count
+				},
+			})
+
+			tmpl, err = tmpl.ParseFiles(fp)
+			if err != nil {
+				log.Printf("Error parsing template: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+
+			err = tmpl.Execute(w, inventories)
+			if err != nil {
+				log.Printf("Error executing template: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
 // ScrapePriceController triggers price scraping for all items
-func ScrapePriceController(sheetsService service.SheetsServiceInterface) func(w http.ResponseWriter, r *http.Request) {
+func ScrapePriceController(inventoryService *service.InventoryService) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			// Get all items with tokped_keyword
-			inventories, err := sheetsService.GetAllInventory()
+			inventories, err := inventoryService.GetAllInventory()
 			if err != nil {
 				log.Printf("Error fetching items for scraping: %v", err)
 				http.Error(w, "Failed to fetch items", http.StatusInternalServerError)
@@ -239,13 +308,13 @@ func ScrapePriceController(sheetsService service.SheetsServiceInterface) func(w 
 			}
 
 			var updatedCount int
-			for i, inv := range inventories {
+			for _, inv := range inventories {
 				if inv.TokpedKeyword != "" {
 					// Simulate price scraping
 					hargaPasar := service.SimulatePriceScraping(inv.TokpedKeyword, inv.HargaJual)
 
 					// Update the market price
-					err = sheetsService.UpdateMarketPrice(i, hargaPasar)
+					err = inventoryService.UpdateMarketPrice(inv.ID, hargaPasar)
 					if err == nil {
 						updatedCount++
 					}

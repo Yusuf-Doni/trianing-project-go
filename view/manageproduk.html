@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+
+    <title>Sistem Manajemen Inventory - Tokopedia Scraping</title>
+    <style>
+      .price-compare {
+        font-size: 0.9em;
+      }
+      .price-higher {
+        color: #28a745;
+      }
+      .price-lower {
+        color: #dc3545;
+      }
+      .price-equal {
+        color: #6c757d;
+      }
+      .table th {
+        background-color: #343a40;
+        color: white;
+        font-weight: 600;
+      }
+      .btn-scrape {
+        background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        border: none;
+        color: white;
+      }
+      .btn-scrape:hover {
+        background: linear-gradient(45deg, #ee5a24, #ff6b6b);
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid mt-4">
+      <!-- Header -->
+      <div class="row mb-4">
+        <div class="col">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h1 class="display-6 mb-2">
+                <i class="bi bi-boxes"></i> Sistem Manajemen Inventory
+              </h1>
+              <p class="text-muted">Monitoring stok, harga jual, dan harga pasar dengan integrasi Tokopedia</p>
+            </div>
+            <div>
+              <form method="POST" action="/logout" class="d-inline">
+                <button type="submit" class="btn btn-outline-danger">
+                  <i class="bi bi-box-arrow-right"></i> Logout
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="row mb-4">
+        <div class="col">
+          <div class="d-flex gap-2">
+            <a href="/addproduct" class="btn btn-success">
+              <i class="bi bi-plus-circle"></i> Tambah Produk
+            </a>
+            <button class="btn btn-scrape" onclick="scrapeAllPrices()">
+              <i class="bi bi-arrow-clockwise"></i> Update Harga Pasar
+            </button>
+            <button class="btn btn-outline-info" onclick="location.reload()">
+              <i class="bi bi-arrow-repeat"></i> Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Table View -->
+      <div class="card">
+        <div class="card-header bg-dark text-white">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-table"></i> Daftar Inventory
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0">
+              <thead class="table-dark">
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">Nama Barang</th>
+                  <th scope="col">Stok Dimiliki</th>
+                  <th scope="col">Stok Terjual</th>
+                  <th scope="col">Stok Masuk</th>
+                  <th scope="col">Harga Jual</th>
+                  <th scope="col">Harga Beli</th>
+                  <th scope="col">Harga Pasar</th>
+                  <th scope="col">Keyword Tokopedia</th>
+                  <th scope="col">Keterangan</th>
+                  <th scope="col">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{range .}}
+                <tr>
+                  <th scope="row">{{.ID}}</th>
+                  <td>
+                    <strong>{{.NamaBarang}}</strong>
+                  </td>
+                  <td>
+                    <span class="badge bg-primary">{{.StokDimiliki}}</span>
+                  </td>
+                  <td>
+                    <span class="badge bg-success">{{.StokTerjual}}</span>
+                  </td>
+                  <td>
+                    <span class="badge bg-info">{{.StokMasuk}}</span>
+                  </td>
+                  <td>
+                    <strong>Rp {{formatNumber .HargaJual}}</strong>
+                  </td>
+                  <td>
+                    Rp {{formatNumber .HargaBeli}}
+                  </td>
+                  <td>
+                    <div class="price-compare">
+                      <strong>Rp {{formatNumber .HargaPasar}}</strong>
+                      {{if gt .HargaPasar .HargaJual}}
+                        <br><small class="price-higher"><i class="bi bi-arrow-up"></i> +{{formatNumber (sub .HargaPasar .HargaJual)}}</small>
+                      {{else if lt .HargaPasar .HargaJual}}
+                        <br><small class="price-lower"><i class="bi bi-arrow-down"></i> -{{formatNumber (sub .HargaJual .HargaPasar)}}</small>
+                      {{else}}
+                        <br><small class="price-equal"><i class="bi bi-dash"></i> Sama</small>
+                      {{end}}
+                    </div>
+                  </td>
+                  <td>
+                    {{if .TokpedKeyword}}
+                      <code>{{.TokpedKeyword}}</code>
+                    {{else}}
+                      <span class="text-muted">-</span>
+                    {{end}}
+                  </td>
+                  <td>
+                    {{if .Keterangan}}
+                      {{.Keterangan}}
+                    {{else}}
+                      <span class="text-muted">-</span>
+                    {{end}}
+                  </td>
+                  <td>
+                    <div class="btn-group" role="group">
+                      <button class="btn btn-sm btn-outline-primary" onclick="editProduct('{{.ID}}')">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('{{.ID}}')">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {{else}}
+                <tr>
+                  <td colspan="11" class="text-center text-muted py-4">
+                    <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                    Belum ada data inventory. <a href="/addproduct">Tambah produk pertama</a>
+                  </td>
+                </tr>
+                {{end}}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Stats -->
+      {{if .}}
+      <div class="row mt-4">
+        <div class="col-md-3">
+          <div class="card bg-primary text-white">
+            <div class="card-body">
+              <h5 class="card-title">Total Produk</h5>
+              <h3>{{len .}}</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-success text-white">
+            <div class="card-body">
+              <h5 class="card-title">Total Stok</h5>
+              <h3>{{getTotalStock .}}</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-info text-white">
+            <div class="card-body">
+              <h5 class="card-title">Nilai Inventory</h5>
+              <h3>Rp {{formatNumber (getTotalValue .)}}</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-warning text-white">
+            <div class="card-body">
+              <h5 class="card-title">Produk dengan Scraping</h5>
+              <h3>{{getScrapingCount .}}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      {{end}}
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+      function scrapeAllPrices() {
+        if (confirm('Apakah Anda yakin ingin mengupdate harga pasar untuk semua produk?')) {
+          const button = event.target;
+          const originalText = button.innerHTML;
+          
+          button.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Scraping...';
+          button.disabled = true;
+          
+          fetch('/scrape', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert(`Berhasil mengupdate ${data.count} produk!`);
+              location.reload();
+            } else {
+              alert('Gagal mengupdate harga pasar');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat scraping');
+          })
+          .finally(() => {
+            button.innerHTML = originalText;
+            button.disabled = false;
+          });
+        }
+      }
+
+      function editProduct(id) {
+        // Simple edit functionality - redirect to edit page or show modal
+        alert('Fitur edit akan segera tersedia untuk produk ID: ' + id);
+      }
+
+      function deleteProduct(id) {
+        if (confirm('Apakah Anda yakin ingin menghapus produk ini?')) {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '/delete';
+          
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'id';
+          input.value = id;
+          
+          form.appendChild(input);
+          document.body.appendChild(form);
+          form.submit();
+        }
+      }
+
+      // Auto-refresh every 5 minutes
+      setInterval(() => {
+        location.reload();
+      }, 300000);
+    </script>
+  </body>
+</html>
