@@ -29,7 +29,7 @@ func DashboardController(inventoryService *service.InventoryService) func(w http
 		}
 
 		fp := filepath.Join("view", "index.html")
-		
+
 		// Create template with custom functions
 		tmpl := template.New("index.html").Funcs(template.FuncMap{
 			"formatNumber": func(n int) string {
@@ -239,7 +239,7 @@ func ManageProductController(inventoryService *service.InventoryService) func(w 
 			}
 
 			fp := filepath.Join("view", "manageproduk.html")
-			
+
 			// Create template with custom functions
 			tmpl := template.New("manageproduk.html").Funcs(template.FuncMap{
 				"formatNumber": func(n int) string {

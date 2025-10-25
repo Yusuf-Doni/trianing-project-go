@@ -28,12 +28,12 @@ func main() {
 
 	routes.MapRoutes(server, inventoryService, db)
 
-	log.Println("🚀 Server starting on :8000")
-	log.Println("🔐 Login: http://localhost:8000/login")
-	log.Println("📝 Register: http://localhost:8000/register")
-	log.Println("📊 Dashboard: http://localhost:8000/dashboard")
-	log.Println("➕ Add Product: http://localhost:8000/addproduct")
+	log.Println("🚀 Server starting on :9000")
+	log.Println("🔐 Login: http://localhost:9000/login")
+	log.Println("📝 Register: http://localhost:9000/register")
+	log.Println("📊 Dashboard: http://localhost:9000/dashboard")
+	log.Println("➕ Add Product: http://localhost:9000/addproduct")
 	log.Println("👤 Default Admin: username=admin, password=admin123")
-	
-	http.ListenAndServe(":8000", server)
+
+	http.ListenAndServe(":9000", server)
 }

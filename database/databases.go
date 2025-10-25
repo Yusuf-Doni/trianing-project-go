@@ -12,7 +12,7 @@ var DB *sql.DB
 // InitDatabase inisialisasi koneksi ke PostgreSQL
 func InitDatabase() *sql.DB {
 	// Format DSN: "postgres://username:password@host:port/dbname"
-	dsn := "postgres://postgres:password@localhost:5434/postgres?sslmode=disable"
+	dsn := "postgres://postgres:postgres123@localhost:5432/testdb?sslmode=disable"
 
 	var err error
 	DB, err = sql.Open("postgres", dsn)
@@ -77,7 +77,7 @@ func InitDatabase() *sql.DB {
 		id VARCHAR(64) PRIMARY KEY,
 		user_id INTEGER NOT NULL,
 		username VARCHAR(50) NOT NULL,
-		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,	
 		expires_at TIMESTAMP NOT NULL
 	);`
 
@@ -126,6 +126,6 @@ func InitDatabase() *sql.DB {
 		log.Printf("Warning: gagal insert admin user: %v", err)
 	}
 
-	log.Println("✅ Koneksi ke PostgreSQL berhasil dan tabel inventory siap!")
+	log.Println("Koneksi ke PostgreSQL berhasil dan tabel inventory siap!")
 	return DB
 }
