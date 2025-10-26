@@ -10,25 +10,9 @@ import (
 	"net/http"
 	"path/filepath"
 	"time"
+
+	"github.com/Yusuf-Doni/web-go-CRUD/model"
 )
-
-// User represents a user in the system
-type User struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Email    string `json:"email"`
-	Role     string `json:"role"`
-}
-
-// Session represents a user session
-type Session struct {
-	ID        string    `json:"id"`
-	UserID    int       `json:"user_id"`
-	Username  string    `json:"username"`
-	CreatedAt time.Time `json:"created_at"`
-	ExpiresAt time.Time `json:"expires_at"`
-}
 
 // LoginController handles login page display and authentication
 func LoginController(db *sql.DB) func(w http.ResponseWriter, r *http.Request) {
@@ -191,14 +175,14 @@ func RegisterController(db *sql.DB) func(w http.ResponseWriter, r *http.Request)
 }
 
 // authenticateUser validates user credentials
-func authenticateUser(db *sql.DB, username, password string) (*User, error) {
+func authenticateUser(db *sql.DB, username, password string) (*model.User, error) {
 	query := `
 		SELECT id, username, password, email, role 
 		FROM users 
 		WHERE username = $1 AND password = $2
 	`
 
-	var user User
+	var user model.User
 	err := db.QueryRow(query, username, password).Scan(
 		&user.ID, &user.Username, &user.Password, &user.Email, &user.Role,
 	)
@@ -280,7 +264,7 @@ func IsLoggedIn(r *http.Request) bool {
 }
 
 // GetCurrentUser returns the current logged-in user
-func GetCurrentUser(db *sql.DB, r *http.Request) (*User, error) {
+func GetCurrentUser(db *sql.DB, r *http.Request) (*model.User, error) {
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		return nil, fmt.Errorf("no session found")
@@ -293,7 +277,7 @@ func GetCurrentUser(db *sql.DB, r *http.Request) (*User, error) {
 		WHERE s.id = $1 AND s.expires_at > $2
 	`
 
-	var user User
+	var user model.User
 	err = db.QueryRow(query, cookie.Value, time.Now()).Scan(
 		&user.ID, &user.Username, &user.Email, &user.Role,
 	)
