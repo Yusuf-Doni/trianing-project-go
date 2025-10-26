@@ -15,18 +15,18 @@ func main() {
 	db := database.InitDatabase()
 	defer db.Close()
 
-	// Create inventory service
-	inventoryService := service.NewInventoryService(db)
+	// Create book service
+	bookService := service.NewBookService(db)
 
 	// Initialize database schema
-	err := inventoryService.InitializeSheet()
+	err := bookService.InitializeSheet()
 	if err != nil {
 		log.Printf("Warning: Failed to initialize database: %v", err)
 	}
 
 	server := http.NewServeMux()
 
-	routes.MapRoutes(server, inventoryService, db)
+	routes.MapRoutes(server, bookService, db)
 
 	log.Println("🚀 Server starting on :9000")
 	log.Println("🔐 Login: http://localhost:9000/login")

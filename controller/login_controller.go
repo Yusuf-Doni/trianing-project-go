@@ -130,6 +130,12 @@ func LogoutController(db *sql.DB) func(w http.ResponseWriter, r *http.Request) {
 func RegisterController(db *sql.DB) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
+
+			if IsLoggedIn(r) {
+				http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+				return
+			}
+
 			fp := filepath.Join("view", "register.html")
 			tmpl, err := template.ParseFiles(fp)
 			if err != nil {
@@ -191,16 +197,16 @@ func authenticateUser(db *sql.DB, username, password string) (*User, error) {
 		FROM users 
 		WHERE username = $1 AND password = $2
 	`
-	
+
 	var user User
 	err := db.QueryRow(query, username, password).Scan(
 		&user.ID, &user.Username, &user.Password, &user.Email, &user.Role,
 	)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("invalid credentials")
 	}
-	
+
 	return &user, nil
 }
 
@@ -208,21 +214,21 @@ func authenticateUser(db *sql.DB, username, password string) (*User, error) {
 func createSession(db *sql.DB, userID int, username string) (string, error) {
 	// Generate random session ID
 	sessionID := generateSessionID()
-	
+
 	// Create session in database
 	query := `
 		INSERT INTO sessions (id, user_id, username, created_at, expires_at) 
 		VALUES ($1, $2, $3, $4, $5)
 	`
-	
+
 	now := time.Now()
 	expiresAt := now.Add(24 * time.Hour)
-	
+
 	_, err := db.Exec(query, sessionID, userID, username, now, expiresAt)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return sessionID, nil
 }
 
@@ -248,7 +254,7 @@ func createUser(db *sql.DB, username, password, email string) (int, error) {
 		VALUES ($1, $2, $3, $4) 
 		RETURNING id
 	`
-	
+
 	var userID int
 	err := db.QueryRow(query, username, password, email, "user").Scan(&userID)
 	return userID, err
@@ -267,7 +273,7 @@ func IsLoggedIn(r *http.Request) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	// You would typically validate the session in the database here
 	// For simplicity, we'll just check if the cookie exists
 	return cookie.Value != ""
@@ -279,23 +285,23 @@ func GetCurrentUser(db *sql.DB, r *http.Request) (*User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("no session found")
 	}
-	
+
 	query := `
 		SELECT u.id, u.username, u.email, u.role 
 		FROM users u 
 		JOIN sessions s ON u.id = s.user_id 
 		WHERE s.id = $1 AND s.expires_at > $2
 	`
-	
+
 	var user User
 	err = db.QueryRow(query, cookie.Value, time.Now()).Scan(
 		&user.ID, &user.Username, &user.Email, &user.Role,
 	)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("invalid session")
 	}
-	
+
 	return &user, nil
 }
 
@@ -306,14 +312,14 @@ func RequireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
-		
+
 		// Validate session in database
 		_, err := GetCurrentUser(db, r)
 		if err != nil {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
-		
+
 		next.ServeHTTP(w, r)
 	}
 }

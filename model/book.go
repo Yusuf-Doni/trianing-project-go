@@ -2,8 +2,8 @@ package model
 
 import "time"
 
-// Inventory represents the inventory structure matching Google Sheets
-type Inventory struct {
+// Book represents the book structure matching Google Sheets
+type Book struct {
 	ID            int       `json:"id" db:"id"`
 	NamaBarang    string    `json:"nama_barang" db:"nama_barang"`
 	Stok          int       `json:"stok" db:"stok"`

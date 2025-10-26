@@ -1,7 +1,7 @@
-# Arsitektur Sistem Inventory Management
+# Arsitektur Sistem Book Management
 
 ## Overview
-Sistem inventory management dengan PostgreSQL database menggunakan arsitektur monolitik. Sistem ini fokus pada manajemen inventory dengan simulasi scraping harga pasar.
+Sistem book management dengan PostgreSQL database menggunakan arsitektur monolitik. Sistem ini fokus pada manajemen book dengan simulasi scraping harga pasar.
 
 ## Komponen Sistem
 
@@ -21,7 +21,7 @@ Sistem inventory management dengan PostgreSQL database menggunakan arsitektur mo
 │                 BACKEND (Golang)                            │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
 │  │   Controllers   │  │     Models      │  │    Routes    │ │
-│  │   - CRUD Ops    │  │   - Inventory   │  │   - REST API │ │
+│  │   - CRUD Ops    │  │   - Book   │  │   - REST API │ │
 │  │   - Validation  │  │   - Data Types  │  │   - Handlers │ │
 │  │   - Business    │  │   - Structures  │  │   - Mapping  │ │
 │  └─────────────────┘  └─────────────────┘  └──────────────┘ │
@@ -31,7 +31,7 @@ Sistem inventory management dengan PostgreSQL database menggunakan arsitektur mo
 ┌─────────────────────────────────────────────────────────────┐
 │                DATABASE (PostgreSQL)                       │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
-│  │   Inventory     │  │   Auto Schema   │  │  Sample Data │ │
+│  │   Book     │  │   Auto Schema   │  │  Sample Data │ │
 │  │   - CRUD Data   │  │   - Migration   │  │   - Testing  │ │
 │  │   - Relations   │  │   - Indexes     │  │   - Seeds    │ │
 │  └─────────────────┘  └─────────────────┘  └──────────────┘ │
@@ -67,9 +67,9 @@ Database Query → Data Processing → Template Rendering → HTML Output
 
 ## Database Schema
 
-### Tabel: inventory
+### Tabel: book
 ```sql
-CREATE TABLE inventory (
+CREATE TABLE book (
     id SERIAL PRIMARY KEY,
     nama_barang TEXT NOT NULL,           -- Kolom A: Nama produk yang dinormalisasi
     stok_dimiliki INTEGER DEFAULT 0,     -- Kolom B: Stok fisik di gudang
@@ -89,7 +89,7 @@ CREATE TABLE inventory (
 
 ### REST API Structure
 ```
-GET    /dashboard           → Dashboard utama dengan data inventory
+GET    /dashboard           → Dashboard utama dengan data book
 GET    /addproduct          → Form tambah produk baru
 POST   /addproduct          → Submit form tambah produk
 POST   /update              → Update data produk existing
@@ -147,8 +147,8 @@ Load Balancer → Go Application → PostgreSQL Cluster
 - Error rate dan exception handling
 
 ### Business Metrics
-- Total produk dalam inventory
-- Nilai total inventory
+- Total produk dalam book
+- Nilai total book
 - Harga pasar vs harga jual comparison
 - Scraping accuracy rate
 

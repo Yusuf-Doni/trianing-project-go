@@ -24,11 +24,11 @@ CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
 
 -- Insert default admin user (password: admin123)
 INSERT INTO users (username, password, email, role) VALUES 
-('admin', 'admin123', 'admin@inventory.com', 'admin')
+('admin', 'admin123', 'admin@book.com', 'admin')
 ON CONFLICT (username) DO NOTHING;
 
 -- Insert sample users for testing
 INSERT INTO users (username, password, email, role) VALUES 
 ('user1', 'password123', 'user1@example.com', 'user'),
-('manager', 'manager123', 'manager@inventory.com', 'manager')
+('manager', 'manager123', 'manager@book.com', 'manager')
 ON CONFLICT (username) DO NOTHING;

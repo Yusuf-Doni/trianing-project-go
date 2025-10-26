@@ -96,9 +96,7 @@
                   <th scope="col">Nama Barang</th>
                   <th scope="col">Stok Dimiliki</th>
                   <th scope="col">Stok Terjual</th>
-                  <th scope="col">Stok Masuk</th>
                   <th scope="col">Harga Jual</th>
-                  <th scope="col">Harga Beli</th>
                   <th scope="col">Harga Pasar</th>
                   <th scope="col">Keyword Tokopedia</th>
                   <th scope="col">Keterangan</th>
@@ -113,27 +111,21 @@
                     <strong>{{.NamaBarang}}</strong>
                   </td>
                   <td>
-                    <span class="badge bg-primary">{{.StokDimiliki}}</span>
+                    <span class="badge bg-primary">{{.Stok}}</span>
                   </td>
                   <td>
-                    <span class="badge bg-success">{{.StokTerjual}}</span>
+                    <span class="badge bg-success">{{.Terjual}}</span>
                   </td>
                   <td>
-                    <span class="badge bg-info">{{.StokMasuk}}</span>
-                  </td>
-                  <td>
-                    <strong>Rp {{formatNumber .HargaJual}}</strong>
-                  </td>
-                  <td>
-                    Rp {{formatNumber .HargaBeli}}
+                    <strong>Rp {{formatNumber .Harga}}</strong>
                   </td>
                   <td>
                     <div class="price-compare">
                       <strong>Rp {{formatNumber .HargaPasar}}</strong>
-                      {{if gt .HargaPasar .HargaJual}}
-                        <br><small class="price-higher"><i class="bi bi-arrow-up"></i> +{{formatNumber (sub .HargaPasar .HargaJual)}}</small>
-                      {{else if lt .HargaPasar .HargaJual}}
-                        <br><small class="price-lower"><i class="bi bi-arrow-down"></i> -{{formatNumber (sub .HargaJual .HargaPasar)}}</small>
+                      {{if gt .HargaPasar .Harga}}
+                        <br><small class="price-higher"><i class="bi bi-arrow-up"></i> +{{formatNumber (sub .HargaPasar .Harga)}}</small>
+                      {{else if lt .HargaPasar .Harga}}
+                        <br><small class="price-lower"><i class="bi bi-arrow-down"></i> -{{formatNumber (sub .Harga .HargaPasar)}}</small>
                       {{else}}
                         <br><small class="price-equal"><i class="bi bi-dash"></i> Sama</small>
                       {{end}}
