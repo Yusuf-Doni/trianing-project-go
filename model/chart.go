@@ -1,6 +1,9 @@
 package model
 
 type Chart struct {
-	ID         int    `json:"id" db:"id"`
-	NamaBarang string `json:"nama_barang" db:"nama_barang"`
+	ID     int `json:"id" db:"id"`
+	UserID int `json:"user_id" db:"user_id"`
+	BookID int `json:"book_id" db:"book_id"`
+	Jumlah int `json:"jumlah" db:"jumlah"`
+	Harga  int `json:"harga" db:"harga"`
 }
