@@ -81,6 +81,36 @@ func (s *BookService) AddBook(inv model.Book) error {
 	return nil
 }
 
+// GetBookByID retrieves a single book by its ID
+func (s *BookService) GetBookByID(id int) (model.Book, error) {
+	query := `
+		SELECT id, nama_barang, stok, terjual, harga, harga_pasar, tokped_keyword, keterangan
+		FROM books
+		WHERE id = $1
+	`
+
+	var inv model.Book
+	err := s.db.QueryRow(query, id).Scan(
+		&inv.ID,
+		&inv.NamaBarang,
+		&inv.Stok,
+		&inv.Terjual,
+		&inv.Harga,
+		&inv.HargaPasar,
+		&inv.TokpedKeyword,
+		&inv.Keterangan,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return inv, fmt.Errorf("book with ID %d not found", id)
+		}
+		return inv, fmt.Errorf("failed to get book by id: %v", err)
+	}
+
+	return inv, nil
+}
+
 // UpdateBook updates an existing book item in PostgreSQL
 func (s *BookService) UpdateBook(id int, inv model.Book) error {
 	query := `

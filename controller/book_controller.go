@@ -155,6 +155,47 @@ func AddProductController(bookService *service.BookService) func(w http.Response
 	}
 }
 
+// EditBookController displays the edit form for a specific book
+func EditBookController(bookService *service.BookService) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			// Ambil ID dari query parameter, misalnya /edit?id=5
+			idStr := r.URL.Query().Get("id")
+			id, err := strconv.Atoi(idStr)
+			if err != nil {
+				http.Error(w, "Invalid book ID", http.StatusBadRequest)
+				return
+			}
+
+			// Ambil data book dari service
+			book, err := bookService.GetBookByID(id)
+			if err != nil {
+				http.Error(w, "Book not found", http.StatusNotFound)
+				return
+			}
+
+			// Load template
+			fp := filepath.Join("view", "editbook.html")
+			tmpl, err := template.ParseFiles(fp)
+			if err != nil {
+				log.Printf("Error parsing template: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+
+			// Kirim data ke template
+			err = tmpl.Execute(w, book)
+			if err != nil {
+				log.Printf("Error executing template: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
 // UpdateBookController handles updating book items
 func UpdateBookController(bookService *service.BookService) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {

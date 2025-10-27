@@ -249,9 +249,12 @@
       }
 
       function editProduct(id) {
-        // Simple edit functionality - redirect to edit page or show modal
-        alert('Fitur edit akan segera tersedia untuk produk ID: ' + id);
+      const button = event.currentTarget;
+      button.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+      button.disabled = true;
+      window.location.href = '/edit?id=' + id;
       }
+
 
       function deleteProduct(id) {
         if (confirm('Apakah Anda yakin ingin menghapus produk ini?')) {

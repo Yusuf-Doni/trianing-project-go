@@ -18,6 +18,7 @@ func MapRoutes(server *http.ServeMux, bookService *service.BookService, db *sql.
 	server.HandleFunc("/dashboard", controller.RequireAuth(db, controller.DashboardController(bookService)))
 	server.HandleFunc("/addproduct", controller.RequireAuth(db, controller.AddProductController(bookService)))
 	server.HandleFunc("/manageproduk", controller.RequireAuth(db, controller.ManageProductController(bookService)))
+	server.HandleFunc("/edit", controller.RequireAuth(db, controller.EditBookController(bookService)))
 	server.HandleFunc("/update", controller.RequireAuth(db, controller.UpdateBookController(bookService)))
 	server.HandleFunc("/delete", controller.RequireAuth(db, controller.DeleteBookController(bookService)))
 	server.HandleFunc("/scrape", controller.RequireAuth(db, controller.ScrapePriceController(bookService)))
