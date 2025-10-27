@@ -2,7 +2,9 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"os"
 
 	_ "github.com/lib/pq"
 )
@@ -11,8 +13,17 @@ var DB *sql.DB
 
 // InitDatabase inisialisasi koneksi ke PostgreSQL
 func InitDatabase() *sql.DB {
-	// Format DSN: "postgres://username:password@host:port/dbname"
-	dsn := "postgres://postgres:postgres123@localhost:5432/testdb?sslmode=disable"
+	// Ambil variabel environment
+	user := os.Getenv("DB_USER")
+	pass := os.Getenv("DB_PASSWORD")
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	name := os.Getenv("DB_NAME")
+	sslmode := os.Getenv("DB_SSLMODE")
+
+	// Susun DSN PostgreSQL
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		user, pass, host, port, name, sslmode)
 
 	var err error
 	DB, err = sql.Open("postgres", dsn)
