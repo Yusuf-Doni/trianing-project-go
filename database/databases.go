@@ -95,6 +95,91 @@ func InitDatabase() *sql.DB {
 		log.Fatalf("gagal membuat tabel sessions: %v", err)
 	}
 
+	createCartTable := `
+CREATE TABLE IF NOT EXISTS cart (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    book_id INTEGER NOT NULL,
+    jumlah INTEGER NOT NULL DEFAULT 1,
+    harga INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+);`
+
+	_, err = DB.Exec(createCartTable)
+	if err != nil {
+		log.Fatalf("gagal membuat tabel cart: %v", err)
+	}
+
+	createPaymentTable := `
+CREATE TABLE IF NOT EXISTS payment (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    total_item INTEGER NOT NULL DEFAULT 0,
+    total_harga INTEGER NOT NULL DEFAULT 0,
+    status SMALLINT NOT NULL DEFAULT 0, -- 0=draft, 1=sukses, 2=batal
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);`
+
+	_, err = DB.Exec(createPaymentTable)
+	if err != nil {
+		log.Fatalf("gagal membuat tabel payment: %v", err)
+	}
+
+	createPaymentDetailTable := `
+CREATE TABLE IF NOT EXISTS payment_detail (
+    id SERIAL PRIMARY KEY,
+    payment_id INTEGER NOT NULL,
+    book_id INTEGER NOT NULL,
+    jumlah INTEGER NOT NULL DEFAULT 1,
+    harga_satuan INTEGER NOT NULL DEFAULT 0,
+    total_harga INTEGER NOT NULL DEFAULT 0,
+    status SMALLINT NOT NULL DEFAULT 0, -- 0=draft, 1=sukses, 2=batal
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (payment_id) REFERENCES payment(id) ON DELETE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+);`
+
+	_, err = DB.Exec(createPaymentDetailTable)
+	if err != nil {
+		log.Fatalf("gagal membuat tabel payment_detail: %v", err)
+	}
+
+	createOrdersTable := `
+CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    total_harga INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);`
+
+	_, err = DB.Exec(createOrdersTable)
+	if err != nil {
+		log.Fatalf("gagal membuat tabel orders: %v", err)
+	}
+
+	createOrderItemsTable := `
+CREATE TABLE IF NOT EXISTS order_items (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER NOT NULL,
+    book_id INTEGER NOT NULL,
+    jumlah INTEGER NOT NULL DEFAULT 1,
+    harga INTEGER NOT NULL DEFAULT 0,
+    subtotal INTEGER GENERATED ALWAYS AS (jumlah * harga) STORED,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+);`
+
+	_, err = DB.Exec(createOrderItemsTable)
+	if err != nil {
+		log.Fatalf("gagal membuat tabel order_items: %v", err)
+	}
+
 	// Tambahkan foreign key constraint setelah tabel dibuat
 	addForeignKeySQL := `
 	DO $$ 

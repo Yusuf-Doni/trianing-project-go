@@ -9,6 +9,9 @@ import (
 )
 
 func MapRoutes(server *http.ServeMux, bookService *service.BookService, db *sql.DB) {
+	// Inisialisasi service baru untuk cart
+	cartService := service.NewCartService(db)
+
 	// Public routes (no authentication required)
 	server.HandleFunc("/login", controller.LoginController(db))
 	server.HandleFunc("/register", controller.RegisterController(db))
@@ -23,9 +26,15 @@ func MapRoutes(server *http.ServeMux, bookService *service.BookService, db *sql.
 	server.HandleFunc("/delete", controller.RequireAuth(db, controller.DeleteBookController(bookService)))
 	server.HandleFunc("/scrape", controller.RequireAuth(db, controller.ScrapePriceController(bookService)))
 
+	// ================================
+	// 🛒 CART FEATURE (new routes buat Cart)
+	// ================================
+	server.HandleFunc("/cart/add", controller.RequireAuth(db, controller.AddToCartController(cartService, bookService)))
+	server.HandleFunc("/cart/get", controller.RequireAuth(db, controller.GetCartController(cartService)))
+	server.HandleFunc("/cart/remove", controller.RequireAuth(db, controller.RemoveFromCartController(cartService)))
+
 	// Root route - redirect to login or dashboard based on auth status
 	server.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Check if user is logged in
 		if controller.IsLoggedIn(r) {
 			http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 		} else {
