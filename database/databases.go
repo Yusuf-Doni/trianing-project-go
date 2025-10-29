@@ -2,7 +2,9 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"os"
 
 	_ "github.com/lib/pq"
 )
@@ -11,8 +13,17 @@ var DB *sql.DB
 
 // InitDatabase inisialisasi koneksi ke PostgreSQL
 func InitDatabase() *sql.DB {
-	// Format DSN: "postgres://username:password@host:port/dbname"
-	dsn := "postgres://postgres:password@localhost:5434/postgres?sslmode=disable"
+	// Ambil variabel environment
+	user := os.Getenv("DB_USER")
+	pass := os.Getenv("DB_PASSWORD")
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	name := os.Getenv("DB_NAME")
+	sslmode := os.Getenv("DB_SSLMODE")
+
+	// Susun DSN PostgreSQL
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		user, pass, host, port, name, sslmode)
 
 	var err error
 	DB, err = sql.Open("postgres", dsn)
@@ -26,16 +37,14 @@ func InitDatabase() *sql.DB {
 		log.Fatalf("gagal connect DB: %v", err)
 	}
 
-	// Buat tabel inventory sesuai struktur Google Sheets
-	createInventoryTableSQL := `
-	CREATE TABLE IF NOT EXISTS inventory (
+	// Buat tabel book sesuai struktur Google Sheets
+	createBookTableSQL := `
+	CREATE TABLE IF NOT EXISTS books (
 		id SERIAL PRIMARY KEY,
 		nama_barang TEXT NOT NULL,
-		stok_dimiliki INTEGER DEFAULT 0,
-		stok_terjual INTEGER DEFAULT 0,
-		stok_masuk INTEGER DEFAULT 0,
-		harga_jual INTEGER DEFAULT 0,
-		harga_beli INTEGER DEFAULT 0,
+		stok INTEGER DEFAULT 0,
+		terjual INTEGER DEFAULT 0,
+		harga INTEGER DEFAULT 0,
 		harga_pasar INTEGER DEFAULT 0,
 		tokped_keyword TEXT,
 		keterangan TEXT,
@@ -43,9 +52,9 @@ func InitDatabase() *sql.DB {
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
-	_, err = DB.Exec(createInventoryTableSQL)
+	_, err = DB.Exec(createBookTableSQL)
 	if err != nil {
-		log.Fatalf("gagal membuat tabel inventory: %v", err)
+		log.Fatalf("gagal membuat tabel book: %v", err)
 	}
 
 	// Buat tabel users untuk authentication
@@ -77,7 +86,7 @@ func InitDatabase() *sql.DB {
 		id VARCHAR(64) PRIMARY KEY,
 		user_id INTEGER NOT NULL,
 		username VARCHAR(50) NOT NULL,
-		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,	
 		expires_at TIMESTAMP NOT NULL
 	);`
 
@@ -118,7 +127,7 @@ func InitDatabase() *sql.DB {
 	// Insert default admin user jika belum ada
 	insertAdminSQL := `
 	INSERT INTO users (username, password, email, role) VALUES 
-	('admin', 'admin123', 'admin@inventory.com', 'admin')
+	('admin', 'admin123', 'admin@book.com', 'admin')
 	ON CONFLICT (username) DO NOTHING;`
 
 	_, err = DB.Exec(insertAdminSQL)
@@ -126,6 +135,6 @@ func InitDatabase() *sql.DB {
 		log.Printf("Warning: gagal insert admin user: %v", err)
 	}
 
-	log.Println("✅ Koneksi ke PostgreSQL berhasil dan tabel inventory siap!")
+	log.Println("Koneksi ke PostgreSQL berhasil dan tabel book siap!")
 	return DB
 }

@@ -10,25 +10,9 @@ import (
 	"net/http"
 	"path/filepath"
 	"time"
+
+	"github.com/Yusuf-Doni/web-go-CRUD/model"
 )
-
-// User represents a user in the system
-type User struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Email    string `json:"email"`
-	Role     string `json:"role"`
-}
-
-// Session represents a user session
-type Session struct {
-	ID        string    `json:"id"`
-	UserID    int       `json:"user_id"`
-	Username  string    `json:"username"`
-	CreatedAt time.Time `json:"created_at"`
-	ExpiresAt time.Time `json:"expires_at"`
-}
 
 // LoginController handles login page display and authentication
 func LoginController(db *sql.DB) func(w http.ResponseWriter, r *http.Request) {
@@ -130,6 +114,12 @@ func LogoutController(db *sql.DB) func(w http.ResponseWriter, r *http.Request) {
 func RegisterController(db *sql.DB) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
+
+			if IsLoggedIn(r) {
+				http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+				return
+			}
+
 			fp := filepath.Join("view", "register.html")
 			tmpl, err := template.ParseFiles(fp)
 			if err != nil {
@@ -185,22 +175,22 @@ func RegisterController(db *sql.DB) func(w http.ResponseWriter, r *http.Request)
 }
 
 // authenticateUser validates user credentials
-func authenticateUser(db *sql.DB, username, password string) (*User, error) {
+func authenticateUser(db *sql.DB, username, password string) (*model.User, error) {
 	query := `
 		SELECT id, username, password, email, role 
 		FROM users 
 		WHERE username = $1 AND password = $2
 	`
-	
-	var user User
+
+	var user model.User
 	err := db.QueryRow(query, username, password).Scan(
 		&user.ID, &user.Username, &user.Password, &user.Email, &user.Role,
 	)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("invalid credentials")
 	}
-	
+
 	return &user, nil
 }
 
@@ -208,21 +198,21 @@ func authenticateUser(db *sql.DB, username, password string) (*User, error) {
 func createSession(db *sql.DB, userID int, username string) (string, error) {
 	// Generate random session ID
 	sessionID := generateSessionID()
-	
+
 	// Create session in database
 	query := `
 		INSERT INTO sessions (id, user_id, username, created_at, expires_at) 
 		VALUES ($1, $2, $3, $4, $5)
 	`
-	
+
 	now := time.Now()
 	expiresAt := now.Add(24 * time.Hour)
-	
+
 	_, err := db.Exec(query, sessionID, userID, username, now, expiresAt)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return sessionID, nil
 }
 
@@ -248,7 +238,7 @@ func createUser(db *sql.DB, username, password, email string) (int, error) {
 		VALUES ($1, $2, $3, $4) 
 		RETURNING id
 	`
-	
+
 	var userID int
 	err := db.QueryRow(query, username, password, email, "user").Scan(&userID)
 	return userID, err
@@ -267,35 +257,35 @@ func IsLoggedIn(r *http.Request) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	// You would typically validate the session in the database here
 	// For simplicity, we'll just check if the cookie exists
 	return cookie.Value != ""
 }
 
 // GetCurrentUser returns the current logged-in user
-func GetCurrentUser(db *sql.DB, r *http.Request) (*User, error) {
+func GetCurrentUser(db *sql.DB, r *http.Request) (*model.User, error) {
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		return nil, fmt.Errorf("no session found")
 	}
-	
+
 	query := `
 		SELECT u.id, u.username, u.email, u.role 
 		FROM users u 
 		JOIN sessions s ON u.id = s.user_id 
 		WHERE s.id = $1 AND s.expires_at > $2
 	`
-	
-	var user User
+
+	var user model.User
 	err = db.QueryRow(query, cookie.Value, time.Now()).Scan(
 		&user.ID, &user.Username, &user.Email, &user.Role,
 	)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("invalid session")
 	}
-	
+
 	return &user, nil
 }
 
@@ -306,14 +296,14 @@ func RequireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
-		
+
 		// Validate session in database
 		_, err := GetCurrentUser(db, r)
 		if err != nil {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
-		
+
 		next.ServeHTTP(w, r)
 	}
 }

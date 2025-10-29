@@ -13,23 +13,23 @@ import (
 	"github.com/Yusuf-Doni/web-go-CRUD/service"
 )
 
-// GetAllInventory retrieves all inventory items from PostgreSQL
-func GetAllInventory(inventoryService *service.InventoryService) ([]model.Inventory, error) {
-	return inventoryService.GetAllInventory()
+// GetAllBook retrieves all book items from PostgreSQL
+func GetAllBook(bookService *service.BookService) ([]model.Book, error) {
+	return bookService.GetAllBook()
 }
 
-// DashboardController displays the main inventory dashboard
-func DashboardController(inventoryService *service.InventoryService) func(w http.ResponseWriter, r *http.Request) {
+// DashboardController displays the main book dashboard
+func DashboardController(bookService *service.BookService) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		inventories, err := GetAllInventory(inventoryService)
+		inventories, err := GetAllBook(bookService)
 		if err != nil {
-			log.Printf("Error fetching inventory: %v", err)
+			log.Printf("Error fetching book: %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
 		fp := filepath.Join("view", "index.html")
-		
+
 		// Create template with custom functions
 		tmpl := template.New("index.html").Funcs(template.FuncMap{
 			"formatNumber": func(n int) string {
@@ -38,24 +38,24 @@ func DashboardController(inventoryService *service.InventoryService) func(w http
 			"sub": func(a, b int) int {
 				return a - b
 			},
-			"len": func(s []model.Inventory) int {
+			"len": func(s []model.Book) int {
 				return len(s)
 			},
-			"getTotalStock": func(inventories []model.Inventory) int {
+			"getTotalStock": func(inventories []model.Book) int {
 				total := 0
 				for _, inv := range inventories {
-					total += inv.StokDimiliki
+					total += inv.Stok
 				}
 				return total
 			},
-			"getTotalValue": func(inventories []model.Inventory) int {
+			"getTotalValue": func(inventories []model.Book) int {
 				total := 0
 				for _, inv := range inventories {
-					total += inv.StokDimiliki * inv.HargaJual
+					total += inv.Stok * inv.Harga
 				}
 				return total
 			},
-			"getScrapingCount": func(inventories []model.Inventory) int {
+			"getScrapingCount": func(inventories []model.Book) int {
 				count := 0
 				for _, inv := range inventories {
 					if inv.TokpedKeyword != "" {
@@ -100,8 +100,8 @@ func formatCurrency(amount int) string {
 	return result
 }
 
-// AddProductController handles adding new inventory items
-func AddProductController(inventoryService *service.InventoryService) func(w http.ResponseWriter, r *http.Request) {
+// AddProductController handles adding new book items
+func AddProductController(bookService *service.BookService) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			fp := filepath.Join("view", "addproduct.html")
@@ -122,38 +122,32 @@ func AddProductController(inventoryService *service.InventoryService) func(w htt
 			r.ParseForm()
 
 			namaBarang := r.FormValue("nama_barang")
-			stokDimiliki, _ := strconv.Atoi(r.FormValue("stok_dimiliki"))
-			stokTerjual, _ := strconv.Atoi(r.FormValue("stok_terjual"))
-			stokMasuk, _ := strconv.Atoi(r.FormValue("stok_masuk"))
-			hargaJual, _ := strconv.Atoi(r.FormValue("harga_jual"))
-			hargaBeli, _ := strconv.Atoi(r.FormValue("harga_beli"))
+			stok, _ := strconv.Atoi(r.FormValue("stok"))
+			harga, _ := strconv.Atoi(r.FormValue("harga"))
 			tokpedKeyword := r.FormValue("tokped_keyword")
 			keterangan := r.FormValue("keterangan")
 
 			// Simulate market price scraping
-			hargaPasar := service.SimulatePriceScraping(tokpedKeyword, hargaJual)
+			hargaPasar := service.SimulatePriceScraping(tokpedKeyword, harga)
 
-			// Create inventory model
-			inventory := model.Inventory{
+			// Create book model
+			book := model.Book{
 				NamaBarang:    namaBarang,
-				StokDimiliki:  stokDimiliki,
-				StokTerjual:   stokTerjual,
-				StokMasuk:     stokMasuk,
-				HargaJual:     hargaJual,
-				HargaBeli:     hargaBeli,
+				Stok:          stok,
+				Harga:         harga,
 				HargaPasar:    hargaPasar,
 				TokpedKeyword: tokpedKeyword,
 				Keterangan:    keterangan,
 			}
 
-			err := inventoryService.AddInventory(inventory)
+			err := bookService.AddBook(book)
 			if err != nil {
 				log.Printf("Error inserting product: %v", err)
 				http.Error(w, "Failed to save product", http.StatusInternalServerError)
 				return
 			}
 
-			log.Printf("New inventory item added: %s", namaBarang)
+			log.Printf("New book item added: %s", namaBarang)
 			http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -161,38 +155,75 @@ func AddProductController(inventoryService *service.InventoryService) func(w htt
 	}
 }
 
-// UpdateInventoryController handles updating inventory items
-func UpdateInventoryController(inventoryService *service.InventoryService) func(w http.ResponseWriter, r *http.Request) {
+// EditBookController displays the edit form for a specific book
+func EditBookController(bookService *service.BookService) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			// Ambil ID dari query parameter, misalnya /edit?id=5
+			idStr := r.URL.Query().Get("id")
+			id, err := strconv.Atoi(idStr)
+			if err != nil {
+				http.Error(w, "Invalid book ID", http.StatusBadRequest)
+				return
+			}
+
+			// Ambil data book dari service
+			book, err := bookService.GetBookByID(id)
+			if err != nil {
+				http.Error(w, "Book not found", http.StatusNotFound)
+				return
+			}
+
+			// Load template
+			fp := filepath.Join("view", "editbook.html")
+			tmpl, err := template.ParseFiles(fp)
+			if err != nil {
+				log.Printf("Error parsing template: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+
+			// Kirim data ke template
+			err = tmpl.Execute(w, book)
+			if err != nil {
+				log.Printf("Error executing template: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+// UpdateBookController handles updating book items
+func UpdateBookController(bookService *service.BookService) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			id, _ := strconv.Atoi(r.FormValue("id"))
 			namaBarang := r.FormValue("nama_barang")
-			stokDimiliki, _ := strconv.Atoi(r.FormValue("stok_dimiliki"))
-			stokTerjual, _ := strconv.Atoi(r.FormValue("stok_terjual"))
-			stokMasuk, _ := strconv.Atoi(r.FormValue("stok_masuk"))
-			hargaJual, _ := strconv.Atoi(r.FormValue("harga_jual"))
-			hargaBeli, _ := strconv.Atoi(r.FormValue("harga_beli"))
+			stok, _ := strconv.Atoi(r.FormValue("stok"))
+			terjual, _ := strconv.Atoi(r.FormValue("terjual"))
+			harga, _ := strconv.Atoi(r.FormValue("harga"))
 			tokpedKeyword := r.FormValue("tokped_keyword")
 			keterangan := r.FormValue("keterangan")
 
 			// Re-scrape market price
-			hargaPasar := service.SimulatePriceScraping(tokpedKeyword, hargaJual)
+			hargaPasar := service.SimulatePriceScraping(tokpedKeyword, harga)
 
-			// Create inventory model
-			inventory := model.Inventory{
+			// Create book model
+			book := model.Book{
 				ID:            id,
 				NamaBarang:    namaBarang,
-				StokDimiliki:  stokDimiliki,
-				StokTerjual:   stokTerjual,
-				StokMasuk:     stokMasuk,
-				HargaJual:     hargaJual,
-				HargaBeli:     hargaBeli,
+				Stok:          stok,
+				Terjual:       terjual,
+				Harga:         harga,
 				HargaPasar:    hargaPasar,
 				TokpedKeyword: tokpedKeyword,
 				Keterangan:    keterangan,
 			}
 
-			err := inventoryService.UpdateInventory(id, inventory)
+			err := bookService.UpdateBook(id, book)
 			if err != nil {
 				log.Printf("Error updating product: %v", err)
 				http.Error(w, "Failed to update product", http.StatusInternalServerError)
@@ -206,13 +237,13 @@ func UpdateInventoryController(inventoryService *service.InventoryService) func(
 	}
 }
 
-// DeleteInventoryController handles deleting inventory items
-func DeleteInventoryController(inventoryService *service.InventoryService) func(w http.ResponseWriter, r *http.Request) {
+// DeleteBookController handles deleting book items
+func DeleteBookController(bookService *service.BookService) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			id, _ := strconv.Atoi(r.FormValue("id"))
 
-			err := inventoryService.DeleteInventory(id)
+			err := bookService.DeleteBook(id)
 			if err != nil {
 				log.Printf("Error deleting product: %v", err)
 				http.Error(w, "Failed to delete product", http.StatusInternalServerError)
@@ -227,19 +258,19 @@ func DeleteInventoryController(inventoryService *service.InventoryService) func(
 }
 
 // ManageProductController displays the product management page
-func ManageProductController(inventoryService *service.InventoryService) func(w http.ResponseWriter, r *http.Request) {
+func ManageProductController(bookService *service.BookService) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
-			// Get all inventory items
-			inventories, err := GetAllInventory(inventoryService)
+			// Get all book items
+			inventories, err := GetAllBook(bookService)
 			if err != nil {
-				log.Printf("Error fetching inventory: %v", err)
+				log.Printf("Error fetching book: %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 
 			fp := filepath.Join("view", "manageproduk.html")
-			
+
 			// Create template with custom functions
 			tmpl := template.New("manageproduk.html").Funcs(template.FuncMap{
 				"formatNumber": func(n int) string {
@@ -248,24 +279,24 @@ func ManageProductController(inventoryService *service.InventoryService) func(w 
 				"sub": func(a, b int) int {
 					return a - b
 				},
-				"len": func(s []model.Inventory) int {
+				"len": func(s []model.Book) int {
 					return len(s)
 				},
-				"getTotalStock": func(inventories []model.Inventory) int {
+				"getTotalStock": func(inventories []model.Book) int {
 					total := 0
 					for _, inv := range inventories {
-						total += inv.StokDimiliki
+						total += inv.Stok
 					}
 					return total
 				},
-				"getTotalValue": func(inventories []model.Inventory) int {
+				"getTotalValue": func(inventories []model.Book) int {
 					total := 0
 					for _, inv := range inventories {
-						total += inv.StokDimiliki * inv.HargaJual
+						total += inv.Stok * inv.Harga
 					}
 					return total
 				},
-				"getScrapingCount": func(inventories []model.Inventory) int {
+				"getScrapingCount": func(inventories []model.Book) int {
 					count := 0
 					for _, inv := range inventories {
 						if inv.TokpedKeyword != "" {
@@ -296,11 +327,11 @@ func ManageProductController(inventoryService *service.InventoryService) func(w 
 }
 
 // ScrapePriceController triggers price scraping for all items
-func ScrapePriceController(inventoryService *service.InventoryService) func(w http.ResponseWriter, r *http.Request) {
+func ScrapePriceController(bookService *service.BookService) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			// Get all items with tokped_keyword
-			inventories, err := inventoryService.GetAllInventory()
+			inventories, err := bookService.GetAllBook()
 			if err != nil {
 				log.Printf("Error fetching items for scraping: %v", err)
 				http.Error(w, "Failed to fetch items", http.StatusInternalServerError)
@@ -311,10 +342,10 @@ func ScrapePriceController(inventoryService *service.InventoryService) func(w ht
 			for _, inv := range inventories {
 				if inv.TokpedKeyword != "" {
 					// Simulate price scraping
-					hargaPasar := service.SimulatePriceScraping(inv.TokpedKeyword, inv.HargaJual)
+					hargaPasar := service.SimulatePriceScraping(inv.TokpedKeyword, inv.Harga)
 
 					// Update the market price
-					err = inventoryService.UpdateMarketPrice(inv.ID, hargaPasar)
+					err = bookService.UpdateMarketPrice(inv.ID, hargaPasar)
 					if err == nil {
 						updatedCount++
 					}

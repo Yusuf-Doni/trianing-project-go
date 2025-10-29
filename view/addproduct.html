@@ -10,7 +10,7 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
 
-    <title>Tambah Produk - Sistem Inventory Tokopedia</title>
+    <title>Tambah Produk - Sistem Book Tokopedia</title>
   </head>
   <body>
     <div class="container mt-4">
@@ -57,37 +57,13 @@
                 <div class="row">
                   <div class="col-md-4 mb-3">
                     <label for="stok_dimiliki" class="form-label">Stok Dimiliki <span class="text-danger">*</span></label>
-                    <input type="number" class="form-control" id="stok_dimiliki" name="stok_dimiliki" required 
+                    <input type="number" class="form-control" id="stok" name="stok" required 
                            min="0" placeholder="Stok fisik di gudang">
                     <div class="invalid-feedback">
                       Stok dimiliki harus berupa angka positif.
                     </div>
                     <div class="form-text">
                       Stok fisik yang tersedia di gudang saat ini.
-                    </div>
-                  </div>
-                  
-                  <div class="col-md-4 mb-3">
-                    <label for="stok_terjual" class="form-label">Stok Terjual</label>
-                    <input type="number" class="form-control" id="stok_terjual" name="stok_terjual" 
-                           min="0" placeholder="Jumlah yang sudah terjual" value="0">
-                    <div class="invalid-feedback">
-                      Stok terjual harus berupa angka positif.
-                    </div>
-                    <div class="form-text">
-                      Jumlah yang sudah terjual (untuk kalkulasi).
-                    </div>
-                  </div>
-                  
-                  <div class="col-md-4 mb-3">
-                    <label for="stok_masuk" class="form-label">Stok Masuk</label>
-                    <input type="number" class="form-control" id="stok_masuk" name="stok_masuk" 
-                           min="0" placeholder="Jumlah masuk terakhir" value="0">
-                    <div class="invalid-feedback">
-                      Stok masuk harus berupa angka positif.
-                    </div>
-                    <div class="form-text">
-                      Jumlah masuk terakhir.
                     </div>
                   </div>
                 </div>
@@ -105,7 +81,7 @@
                     <label for="harga_jual" class="form-label">Harga Jual <span class="text-danger">*</span></label>
                     <div class="input-group">
                       <span class="input-group-text">Rp</span>
-                      <input type="number" class="form-control" id="harga_jual" name="harga_jual" required 
+                      <input type="number" class="form-control" id="harga" name="harga" required 
                              min="0" step="100" placeholder="Harga jual yang ditetapkan">
                     </div>
                     <div class="invalid-feedback">
@@ -114,22 +90,7 @@
                     <div class="form-text">
                       Harga jual yang ditetapkan oleh bisnis (Rupiah).
                     </div>
-                  </div>
-                  
-                  <div class="col-md-6 mb-3">
-                    <label for="harga_beli" class="form-label">Harga Beli <span class="text-danger">*</span></label>
-                    <div class="input-group">
-                      <span class="input-group-text">Rp</span>
-                      <input type="number" class="form-control" id="harga_beli" name="harga_beli" required 
-                             min="0" step="100" placeholder="Harga modal">
-                    </div>
-                    <div class="invalid-feedback">
-                      Harga beli harus berupa angka positif.
-                    </div>
-                    <div class="form-text">
-                      Harga modal (Rupiah).
-                    </div>
-                  </div>
+                  </div>  
                 </div>
 
                 <!-- Tokopedia Integration -->
@@ -222,9 +183,8 @@
         
         // Real-time validation
         const namaInput = document.getElementById('nama_barang');
-        const hargaJualInput = document.getElementById('harga_jual');
-        const hargaBeliInput = document.getElementById('harga_beli');
-        const stokInput = document.getElementById('stok_dimiliki');
+        const hargaJualInput = document.getElementById('harga');
+        const stokInput = document.getElementById('stok');
         
         namaInput.addEventListener('input', function() {
           if (this.value.length < 2) {
@@ -238,15 +198,6 @@
           const harga = parseFloat(this.value);
           if (harga < 0) {
             this.setCustomValidity('Harga jual harus positif');
-          } else {
-            this.setCustomValidity('');
-          }
-        });
-        
-        hargaBeliInput.addEventListener('input', function() {
-          const harga = parseFloat(this.value);
-          if (harga < 0) {
-            this.setCustomValidity('Harga beli harus positif');
           } else {
             this.setCustomValidity('');
           }
@@ -276,12 +227,7 @@
       }
       
       // Auto-format price inputs
-      document.getElementById('harga_jual').addEventListener('input', function() {
-        let value = this.value.replace(/\D/g, '');
-        this.value = value;
-      });
-      
-      document.getElementById('harga_beli').addEventListener('input', function() {
+      document.getElementById('harga').addEventListener('input', function() {
         let value = this.value.replace(/\D/g, '');
         this.value = value;
       });

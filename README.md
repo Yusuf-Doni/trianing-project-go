@@ -176,10 +176,10 @@ curl http://localhost:8080/api/users/1
 - **Registration Page**: `/register` - New user registration
 - **Logout**: Automatic session termination
 - **Session Management**: Secure session handling with expiration
-- **Protected Routes**: All inventory management routes require authentication
+- **Protected Routes**: All book management routes require authentication
 
 ### Authentication Flow
-1. **Access Control**: All inventory routes (`/dashboard`, `/addproduct`, etc.) are protected
+1. **Access Control**: All book routes (`/dashboard`, `/addproduct`, etc.) are protected
 2. **Login Required**: Unauthenticated users are redirected to `/login`
 3. **Session Validation**: Sessions are validated on each request
 4. **Automatic Logout**: Sessions expire after 24 hours
