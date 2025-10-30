@@ -25,39 +25,18 @@ func InitDatabase() *sql.DB {
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		user, pass, host, port, name, sslmode)
 
+	// Buat koneksi
 	var err error
 	DB, err = sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatalf("gagal open DB: %v", err)
 	}
 
-	// cek koneksi
-	err = DB.Ping()
-	if err != nil {
-		log.Fatalf("gagal connect DB: %v", err)
+	// Cek koneksi
+	if err = DB.Ping(); err != nil {
+		log.Fatalf("Gagal connect ke DB: %v", err)
 	}
 
-	// Buat tabel book sesuai struktur Google Sheets
-	createBookTableSQL := `
-	CREATE TABLE IF NOT EXISTS books (
-		id SERIAL PRIMARY KEY,
-		nama_barang TEXT NOT NULL,
-		stok INTEGER DEFAULT 0,
-		terjual INTEGER DEFAULT 0,
-		harga INTEGER DEFAULT 0,
-		harga_pasar INTEGER DEFAULT 0,
-		tokped_keyword TEXT,
-		keterangan TEXT,
-		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	);`
-
-	_, err = DB.Exec(createBookTableSQL)
-	if err != nil {
-		log.Fatalf("gagal membuat tabel book: %v", err)
-	}
-
-	// Buat tabel users untuk authentication
 	createUsersTableSQL := `
 	CREATE TABLE IF NOT EXISTS users (
 		id SERIAL PRIMARY KEY,
@@ -69,48 +48,88 @@ func InitDatabase() *sql.DB {
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
-	_, err = DB.Exec(createUsersTableSQL)
-	if err != nil {
-		log.Fatalf("gagal membuat tabel users: %v", err)
+	if _, err = DB.Exec(createUsersTableSQL); err != nil {
+		log.Fatalf("Gagal membuat tabel users: %v", err)
 	}
 
-	// Pastikan tabel users sudah dibuat sebelum membuat sessions
-	_, err = DB.Exec("SELECT 1 FROM users LIMIT 1")
-	if err != nil {
-		log.Fatalf("tabel users belum tersedia: %v", err)
-	}
-
-	// Buat tabel sessions untuk session management (tanpa foreign key dulu)
 	createSessionsTableSQL := `
 	CREATE TABLE IF NOT EXISTS sessions (
 		id VARCHAR(64) PRIMARY KEY,
-		user_id INTEGER NOT NULL,
+		user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 		username VARCHAR(50) NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,	
 		expires_at TIMESTAMP NOT NULL
 	);`
 
-	_, err = DB.Exec(createSessionsTableSQL)
-	if err != nil {
-		log.Fatalf("gagal membuat tabel sessions: %v", err)
+	if _, err = DB.Exec(createSessionsTableSQL); err != nil {
+		log.Fatalf("Gagal membuat tabel sessions: %v", err)
 	}
 
-	createCartTable := `
-CREATE TABLE IF NOT EXISTS cart (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    book_id INTEGER NOT NULL,
-    jumlah INTEGER NOT NULL DEFAULT 1,
-    harga INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-);`
+	createIndexes := `
+	CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+	CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+	`
+	if _, err = DB.Exec(createIndexes); err != nil {
+		log.Printf("Warning: gagal membuat index: %v", err)
+	}
 
-	_, err = DB.Exec(createCartTable)
-	if err != nil {
-		log.Fatalf("gagal membuat tabel cart: %v", err)
+	createBooksTableSQL := `
+	CREATE TABLE IF NOT EXISTS books (
+		id SERIAL PRIMARY KEY,
+		nama_barang TEXT NOT NULL,
+		stok INTEGER DEFAULT 0,
+		terjual INTEGER DEFAULT 0,
+		harga INTEGER DEFAULT 0,
+		harga_pasar INTEGER DEFAULT 0,
+		tokped_keyword TEXT,
+		keterangan TEXT,
+		gambar_buku TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	if _, err = DB.Exec(createBooksTableSQL); err != nil {
+		log.Fatalf("Gagal membuat tabel books: %v", err)
+	}
+
+	createCartsTableSQL := `
+	CREATE TABLE IF NOT EXISTS carts (
+		id SERIAL PRIMARY KEY,
+		user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+		jumlah INTEGER NOT NULL DEFAULT 1,
+		harga INTEGER NOT NULL DEFAULT 0,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	if _, err = DB.Exec(createCartsTableSQL); err != nil {
+		log.Fatalf("Gagal membuat tabel carts: %v", err)
+	}
+
+	createOrdersTableSQL := `
+	CREATE TABLE IF NOT EXISTS orders (
+		id SERIAL PRIMARY KEY,
+		user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		total_harga INTEGER NOT NULL DEFAULT 0,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	if _, err = DB.Exec(createOrdersTableSQL); err != nil {
+		log.Fatalf("gagal membuat tabel orders: %v", err)
+	}
+
+	createOrderItemsTableSQL := `
+	CREATE TABLE IF NOT EXISTS order_items (
+		id SERIAL PRIMARY KEY,
+		order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+		book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+		jumlah INTEGER NOT NULL DEFAULT 1,
+		harga INTEGER NOT NULL DEFAULT 0,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`
+	if _, err = DB.Exec(createOrderItemsTableSQL); err != nil {
+		log.Fatalf("Gagal membuat tabel order_items: %v", err)
 	}
 
 	createPaymentTable := `
@@ -147,66 +166,6 @@ CREATE TABLE IF NOT EXISTS payment_detail (
 	_, err = DB.Exec(createPaymentDetailTable)
 	if err != nil {
 		log.Fatalf("gagal membuat tabel payment_detail: %v", err)
-	}
-
-	createOrdersTable := `
-CREATE TABLE IF NOT EXISTS orders (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    total_harga INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);`
-
-	_, err = DB.Exec(createOrdersTable)
-	if err != nil {
-		log.Fatalf("gagal membuat tabel orders: %v", err)
-	}
-
-	createOrderItemsTable := `
-CREATE TABLE IF NOT EXISTS order_items (
-    id SERIAL PRIMARY KEY,
-    order_id INTEGER NOT NULL,
-    book_id INTEGER NOT NULL,
-    jumlah INTEGER NOT NULL DEFAULT 1,
-    harga INTEGER NOT NULL DEFAULT 0,
-    subtotal INTEGER GENERATED ALWAYS AS (jumlah * harga) STORED,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-);`
-
-	_, err = DB.Exec(createOrderItemsTable)
-	if err != nil {
-		log.Fatalf("gagal membuat tabel order_items: %v", err)
-	}
-
-	// Tambahkan foreign key constraint setelah tabel dibuat
-	addForeignKeySQL := `
-	DO $$ 
-	BEGIN
-		IF NOT EXISTS (
-			SELECT 1 FROM information_schema.table_constraints 
-			WHERE constraint_name = 'sessions_user_id_fkey' 
-			AND table_name = 'sessions'
-		) THEN
-			ALTER TABLE sessions ADD CONSTRAINT sessions_user_id_fkey 
-			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-		END IF;
-	END $$;`
-
-	_, err = DB.Exec(addForeignKeySQL)
-	if err != nil {
-		log.Printf("Warning: gagal menambahkan foreign key constraint: %v", err)
-	}
-
-	// Buat index untuk performa yang lebih baik
-	createIndexSQL := `
-	CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
-	CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);`
-
-	_, err = DB.Exec(createIndexSQL)
-	if err != nil {
-		log.Printf("Warning: gagal membuat index: %v", err)
 	}
 
 	// Insert default admin user jika belum ada

@@ -2,12 +2,11 @@ package model
 
 import "time"
 
-type Cart struct {
+type OrderItem struct {
 	ID        int
-	UserID    int
+	OrderID   int
 	BookID    int
 	Jumlah    int
 	Harga     int
 	CreatedAt time.Time
-	UpdatedAt time.Time
 }
